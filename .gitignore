@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains API keys!)
+.env
+
+# Temp files
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
