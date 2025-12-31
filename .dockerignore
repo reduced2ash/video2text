@@ -1,0 +1,8 @@
+# Exclude from Docker build
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+temp
+*.md
