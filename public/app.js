@@ -3,8 +3,6 @@
 // ========================================
 const convertForm = document.getElementById('convertForm');
 const videoUrlInput = document.getElementById('videoUrl');
-const apiKeyInput = document.getElementById('apiKey');
-const toggleApiKeyBtn = document.getElementById('toggleApiKey');
 const submitBtn = document.getElementById('submitBtn');
 const platformIndicator = document.getElementById('platformIndicator');
 
@@ -110,7 +108,6 @@ function updateProgress(progress, status) {
 
 function setFormDisabled(disabled) {
   videoUrlInput.disabled = disabled;
-  apiKeyInput.disabled = disabled;
   submitBtn.disabled = disabled;
 }
 
@@ -126,13 +123,13 @@ function getLanguageName(code) {
 // ========================================
 // API Functions
 // ========================================
-async function startConversion(url, apiKey) {
+async function startConversion(url) {
   const response = await fetch('/api/convert', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ url, apiKey })
+    body: JSON.stringify({ url })
   });
   
   if (!response.ok) {
@@ -161,28 +158,12 @@ videoUrlInput.addEventListener('input', (e) => {
   updatePlatformIndicator(e.target.value);
 });
 
-toggleApiKeyBtn.addEventListener('click', () => {
-  const eyeOpen = toggleApiKeyBtn.querySelector('.eye-open');
-  const eyeClosed = toggleApiKeyBtn.querySelector('.eye-closed');
-  
-  if (apiKeyInput.type === 'password') {
-    apiKeyInput.type = 'text';
-    eyeOpen.classList.add('hidden');
-    eyeClosed.classList.remove('hidden');
-  } else {
-    apiKeyInput.type = 'password';
-    eyeOpen.classList.remove('hidden');
-    eyeClosed.classList.add('hidden');
-  }
-});
-
 convertForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   
   const url = videoUrlInput.value.trim();
-  const apiKey = apiKeyInput.value.trim();
   
-  if (!url || !apiKey) return;
+  if (!url) return;
   
   const platform = detectPlatform(url);
   if (!platform) {
@@ -196,7 +177,7 @@ convertForm.addEventListener('submit', async (e) => {
     showSection(progressSection);
     updateProgress(0, 'Starting conversion...');
     
-    const { jobId } = await startConversion(url, apiKey);
+    const { jobId } = await startConversion(url);
     currentJobId = jobId;
     
     // Start polling for status
@@ -275,20 +256,4 @@ newConversionBtn.addEventListener('click', () => {
 retryBtn.addEventListener('click', () => {
   showSection(null);
   videoUrlInput.focus();
-});
-
-// ========================================
-// Initialize
-// ========================================
-// Load saved API key from localStorage
-const savedApiKey = localStorage.getItem('elevenlabs_api_key');
-if (savedApiKey) {
-  apiKeyInput.value = savedApiKey;
-}
-
-// Save API key on change
-apiKeyInput.addEventListener('change', () => {
-  if (apiKeyInput.value.trim()) {
-    localStorage.setItem('elevenlabs_api_key', apiKeyInput.value.trim());
-  }
 });

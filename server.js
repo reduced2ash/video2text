@@ -128,14 +128,15 @@ async function cleanup(jobId) {
 
 // API: Start conversion
 app.post('/api/convert', async (req, res) => {
-  const { url, apiKey } = req.body;
+  const { url } = req.body;
+  const apiKey = process.env.ELEVENLABS_API_KEY;
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
   if (!apiKey) {
-    return res.status(400).json({ error: 'ElevenLabs API key is required' });
+    return res.status(500).json({ error: 'Server is not configured with an ElevenLabs API key. Please set ELEVENLABS_API_KEY in your .env file.' });
   }
 
   const platform = detectPlatform(url);
