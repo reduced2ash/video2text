@@ -83,7 +83,7 @@ async function downloadAndExtractAudio(url, jobId) {
   });
 }
 
-// Transcribe audio using ElevenLabs
+// Transcribe audio using Groq Whisper
 async function transcribeAudio(audioPath, apiKey) {
   const { createReadStream } = await import('fs');
   const formData = new FormData();
@@ -92,12 +92,13 @@ async function transcribeAudio(audioPath, apiKey) {
     filename: 'audio.mp3',
     contentType: 'audio/mpeg'
   });
-  formData.append('model_id', 'scribe_v1');
+  formData.append('model', 'whisper-large-v3');
+  formData.append('response_format', 'verbose_json');
 
-  const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+  const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
     method: 'POST',
     headers: {
-      'xi-api-key': apiKey,
+      'Authorization': `Bearer ${apiKey}`,
       ...formData.getHeaders()
     },
     body: formData
@@ -105,11 +106,15 @@ async function transcribeAudio(audioPath, apiKey) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+    throw new Error(`Groq API error: ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
-  return result;
+  return {
+    text: result.text,
+    language: result.language,
+    words: result.words || []
+  };
 }
 
 // Cleanup temp files
@@ -129,14 +134,14 @@ async function cleanup(jobId) {
 // API: Start conversion
 app.post('/api/convert', async (req, res) => {
   const { url } = req.body;
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Server is not configured with an ElevenLabs API key. Please set ELEVENLABS_API_KEY in your .env file.' });
+    return res.status(500).json({ error: 'Server is not configured with a Groq API key. Please set GROQ_API_KEY in your .env file.' });
   }
 
   const platform = detectPlatform(url);
@@ -170,14 +175,14 @@ app.post('/api/convert', async (req, res) => {
       jobs.get(jobId).status = 'transcribing';
       jobs.get(jobId).progress = 50;
 
-      // Step 2: Transcribe with ElevenLabs
+      // Step 2: Transcribe with Groq Whisper
       const result = await transcribeAudio(audioPath, apiKey);
       
       jobs.get(jobId).status = 'completed';
       jobs.get(jobId).progress = 100;
       jobs.get(jobId).text = result.text;
       jobs.get(jobId).words = result.words;
-      jobs.get(jobId).language = result.language_code;
+      jobs.get(jobId).language = result.language;
 
       // Cleanup
       await cleanup(jobId);
