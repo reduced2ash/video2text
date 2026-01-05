@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://videototext.app/sitemap.xml
+Sitemap: https://video2text.org/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1
