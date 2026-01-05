@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://videototext.app/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Disallow API endpoints
+Disallow: /api/

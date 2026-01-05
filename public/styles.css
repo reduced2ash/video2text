@@ -1119,8 +1119,26 @@ input:focus {
   text-align: center;
 }
 
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  transition: color var(--transition-fast);
+}
+
+.footer-links a:hover {
+  color: var(--color-accent);
+}
+
 .footer p {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
