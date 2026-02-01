@@ -54,7 +54,7 @@ async function downloadAndExtractAudio(url, jobId) {
       '-o', outputPath,              // Output file
       '--no-playlist',               // Don't download playlists
       '--max-filesize', '100M',      // Limit file size
-      '--js-runtimes', 'deno,nodejs', // Use Deno or Node.js for YouTube JS
+      '--js-runtimes', 'deno',      // Use Deno for YouTube JS extraction
       '--extractor-args', 'youtube:player_client=web,default', // Try different clients
       url
     ];
