@@ -46,7 +46,6 @@ async function downloadAndExtractAudio(url, jobId) {
   const outputPath = path.join(tempDir, `${jobId}.mp3`);
   
   return new Promise((resolve, reject) => {
-    // yt-dlp command to download and extract audio as mp3
     const args = [
       '-x',                          // Extract audio
       '--audio-format', 'mp3',       // Convert to mp3
@@ -54,8 +53,7 @@ async function downloadAndExtractAudio(url, jobId) {
       '-o', outputPath,              // Output file
       '--no-playlist',               // Don't download playlists
       '--max-filesize', '100M',      // Limit file size
-      '--js-runtimes', 'deno',      // Use Deno for YouTube JS extraction
-      '--extractor-args', 'youtube:player_client=web,default', // Try different clients
+      '--cookies', path.join(__dirname, 'cookies.txt'), // Use cookies for YouTube auth
       url
     ];
 
