@@ -54,6 +54,8 @@ async function downloadAndExtractAudio(url, jobId) {
       '--no-playlist',               // Don't download playlists
       '--max-filesize', '100M',      // Limit file size
       '--cookies', path.join(__dirname, 'cookies.txt'), // Use cookies for YouTube auth
+      '-f', 'bestaudio/best',        // Fallback to best available format
+      '--no-check-certificates',     // Skip certificate verification
       url
     ];
 
