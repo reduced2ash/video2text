@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-const { YoutubeTranscript } = await import('youtube-transcript');
+const { YoutubeTranscript } = await import('youtube-transcript/dist/youtube-transcript.esm.js');
 
 dotenv.config();
 
