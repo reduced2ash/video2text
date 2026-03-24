@@ -8,8 +8,9 @@ import { v4 as uuidv4 } from 'uuid';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import ytTranscript from 'youtube-transcript';
-const YoutubeTranscript = ytTranscript.YoutubeTranscript || ytTranscript;
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { YoutubeTranscript } = require('youtube-transcript');
 
 dotenv.config();
 
