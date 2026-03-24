@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import { YoutubeTranscript } from 'youtube-transcript';
 
 dotenv.config();
 
@@ -41,7 +42,67 @@ function detectPlatform(url) {
   return 'unknown';
 }
 
-// Download video and extract audio using yt-dlp
+// Extract YouTube video ID from URL
+function extractYouTubeVideoId(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+// Fetch YouTube transcript using official captions API
+async function fetchYouTubeTranscript(url) {
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) {
+    throw new Error('Could not extract YouTube video ID from URL');
+  }
+
+  try {
+    const transcriptItems = await YoutubeTranscript.fetchTranscript(videoId);
+
+    if (!transcriptItems || transcriptItems.length === 0) {
+      throw new Error('No transcript/captions available for this video. The video may not have captions enabled.');
+    }
+
+    // Combine all transcript segments into full text
+    const fullText = transcriptItems.map(item => item.text).join(' ');
+
+    // Clean up HTML entities and extra whitespace
+    const cleanedText = fullText
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Build words array with timing info for SRT/VTT export
+    const words = transcriptItems.map(item => ({
+      text: item.text,
+      offset: item.offset / 1000,       // Convert ms to seconds
+      duration: item.duration / 1000     // Convert ms to seconds
+    }));
+
+    return {
+      text: cleanedText,
+      language: 'auto',  // YouTube transcript API doesn't always return language
+      words: words
+    };
+  } catch (err) {
+    if (err.message.includes('No transcript')) {
+      throw err;
+    }
+    throw new Error(`YouTube transcript error: ${err.message}`);
+  }
+}
+
+// Download video and extract audio using yt-dlp (for Instagram/X)
 async function downloadAndExtractAudio(url, jobId) {
   const outputPath = path.join(tempDir, `${jobId}.mp3`);
   
@@ -53,7 +114,6 @@ async function downloadAndExtractAudio(url, jobId) {
       '-o', outputPath,              // Output file
       '--no-playlist',               // Don't download playlists
       '--max-filesize', '100M',      // Limit file size
-      '--cookies', path.join(__dirname, 'cookies.txt'), // Use cookies for YouTube auth
       '-f', 'bestaudio/best',        // Fallback to best available format
       '--no-check-certificates',     // Skip certificate verification
       url
@@ -168,26 +228,39 @@ app.post('/api/convert', async (req, res) => {
   // Process in background
   (async () => {
     try {
-      // Step 1: Download and extract audio
-      jobs.get(jobId).status = 'downloading';
-      jobs.get(jobId).progress = 10;
-      
-      const audioPath = await downloadAndExtractAudio(url, jobId);
-      
-      jobs.get(jobId).status = 'transcribing';
-      jobs.get(jobId).progress = 50;
+      if (platform === 'youtube') {
+        // YouTube: Use transcript API directly (no download needed)
+        jobs.get(jobId).status = 'transcribing';
+        jobs.get(jobId).progress = 30;
 
-      // Step 2: Transcribe with Groq Whisper
-      const result = await transcribeAudio(audioPath, apiKey);
-      
-      jobs.get(jobId).status = 'completed';
-      jobs.get(jobId).progress = 100;
-      jobs.get(jobId).text = result.text;
-      jobs.get(jobId).words = result.words;
-      jobs.get(jobId).language = result.language;
+        const result = await fetchYouTubeTranscript(url);
 
-      // Cleanup
-      await cleanup(jobId);
+        jobs.get(jobId).status = 'completed';
+        jobs.get(jobId).progress = 100;
+        jobs.get(jobId).text = result.text;
+        jobs.get(jobId).words = result.words;
+        jobs.get(jobId).language = result.language;
+      } else {
+        // Instagram/X: Download audio with yt-dlp, then transcribe with Groq
+        jobs.get(jobId).status = 'downloading';
+        jobs.get(jobId).progress = 10;
+        
+        const audioPath = await downloadAndExtractAudio(url, jobId);
+        
+        jobs.get(jobId).status = 'transcribing';
+        jobs.get(jobId).progress = 50;
+
+        const result = await transcribeAudio(audioPath, apiKey);
+        
+        jobs.get(jobId).status = 'completed';
+        jobs.get(jobId).progress = 100;
+        jobs.get(jobId).text = result.text;
+        jobs.get(jobId).words = result.words;
+        jobs.get(jobId).language = result.language;
+
+        // Cleanup audio files
+        await cleanup(jobId);
+      }
     } catch (err) {
       console.error('Conversion error:', err);
       jobs.get(jobId).status = 'error';
