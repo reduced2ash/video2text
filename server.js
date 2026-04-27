@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import { registerProtectedApps } from './apps-gate.js';
 const { YoutubeTranscript } = await import('youtube-transcript/dist/youtube-transcript.esm.js');
 
 dotenv.config();
@@ -22,6 +23,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+registerProtectedApps(app, __dirname);
 
 // Ensure temp directory exists
 const tempDir = path.join(__dirname, 'temp');

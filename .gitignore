@@ -14,3 +14,7 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+protected-apps/
+*.bak-codex-*
+cookies.txt
+deploy-app-hub.sh
