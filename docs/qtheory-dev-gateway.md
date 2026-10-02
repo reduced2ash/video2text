@@ -27,3 +27,16 @@ Rollback: remove the include and validate/reload nginx first. Restore the backed
 Run `node --test test/qtheory-dev-gate.test.js`, `python3 test/qtheory-dev-installer_test.py`, `node --check apps-gate.js`, and `git diff --check`. The project has no build script. Live proxy verification is required in addition to unit tests.
 
 Before: live route returned 404, confirmed in the browser. The initial browser screenshot request timed out; no before image was fabricated.
+
+## Deployed 2026-10-02
+
+- Public route active; Qtheory Dev appears in the existing protected apps hub.
+- Backup: `/home/ubuntu/video2text-backups/qtheory-dev-20261002T164928Z/`.
+- Seven Node tests and two Python installer tests passed on CachyOS and Ubuntu. JS syntax, nginx configuration and diff checks passed.
+- Live public HTTPS: anonymous, expired and malformed sessions denied (401); authenticated page, React entry, Vite client, static assets and read API succeeded (200). A same-origin POST to an intentionally nonexistent API route reached the dev backend (404) without mutating any quiz data. Cross-origin/source requests and Origin-less writes were denied (403).
+- WebSocket handshake: unauthorized 401, cross-origin 403, authenticated 101 with Vite's connected message. Scripts in `scripts/verify-qtheory-dev-live.mjs` and `scripts/verify-qtheory-dev-offline.sh` reproduce the Ubuntu checks using a short-lived signed test session without logging credentials.
+- Offline tests used an isolated nginx listener on loopback 49174 with an unreachable upstream. Unauthenticated access still returned 401; authenticated page/API requests returned 503 with recovery text and Retry-After. The temporary listener was stopped.
+- The original Tailscale HTTPS route remains available. Qtheory production retained PID 508450 and release `c23d74c474a9a60c4c2584a314bbfb421bb4af63`; no production or dev database was altered.
+- Browser observation confirmed the live unauthenticated sign-in screen. Both before and after screenshot capture attempts timed out in the browser backend, so screenshot evidence and authenticated visual browser verification remain unavailable. HTTP/WebSocket checks above exercised the actual public proxy independently.
+
+The tracked gate now also uses the runtime `APP_GATE_SECRET` lookup without a fallback. Ubuntu already had this correction; its authentication code was preserved during deployment. Existing remote modifications to apps-gate.js/server.js and unrelated untracked OU assistant tools were intentionally retained, not swept into this change. The deployment installs the exact versioned gateway module and nginx snippets and applies only the three integration additions to the customized gate.
