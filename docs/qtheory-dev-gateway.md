@@ -1,0 +1,29 @@
+# Qtheory Dev gateway
+
+Tracks [issue #1](https://github.com/reduced2ash/video2text/issues/1).
+
+Public entry: `https://video2text.org/apps/quizcraft/library`, also linked from the protected apps hub. The existing VideoToText session gates HTTP, APIs and WebSocket handshakes. There is no second password or public dev listener.
+
+Route: browser → VideoToText nginx → gate authorization subrequest → `https://cachyos-x8664.tail4124e4.ts.net:8443` over Tailscale → CachyOS loopback port 4174. nginx connects to its tailnet IP with the correct TLS SNI and certificate verification, avoiding reliance on the workstation's currently unreliable MagicDNS resolver. The existing tailnet URL continues to work. Only the workstation's running development code/data is accessed; qtheory.net remains independent.
+
+`qtheory-dev-gate.js` registers the narrowly scoped authorization endpoint using the existing gate session verifier and supplies the hub card. Mutation requests and WebSocket upgrades also require an approved HTTPS Origin. Malformed/missing/expired sessions fail closed. nginx proxies original paths, bodies and query strings, permits uploads up to 50 MB, disables buffering for streamed responses, authenticates upgrades and sends no-store headers. Authorization is checked at each request/handshake, not on every frame of an already open WebSocket.
+
+CachyOS, its dev server, and both hosts' Tailscale connections must remain up. API failures return a structured 503; page failures offer a retry and a link back to apps. Browsers need no Tailscale installation. Anyone who can use the existing app gate can use this dev workspace.
+
+## Deployment
+
+The live Ubuntu checkout has pre-existing, uncommitted integrations. Do **not** replace apps-gate.js or deploy the entire repository over it.
+
+1. Back up `/home/ubuntu/video2text/apps-gate.js` and `/etc/nginx/sites-available/videototext`, with private permissions. Record the current Qtheory production PID/release for comparison.
+2. Copy `qtheory-dev-gate.js` beside the live gate. Dry-run `python3 scripts/install-qtheory-dev-gate.py LIVE_GATE`, then apply with `--write`. It adds only an import, one card, and endpoint registration; it preserves unrelated customizations. Confirm the live gate retains its runtime `APP_GATE_SECRET` lookup with no fallback secret.
+3. Install the four `deploy/qtheory-dev*` files in `/etc/nginx/snippets/`, readable by nginx. Add `include /etc/nginx/snippets/qtheory-dev.conf;` only to the existing VideoToText HTTPS server.
+4. Check JavaScript syntax and `sudo nginx -t`. Restart only PM2's `videototext` process, confirm gate health, then reload nginx. Do not restart Qtheory or Course Compass.
+5. Verify unauthenticated/expired/malformed sessions are denied for pages, assets, APIs and upgrades; authenticated page/assets/read APIs load; same-origin writes reach the dev app; cross-origin requests fail; and Vite HMR returns 101 and its connected message. Test offline responses using an isolated nginx listener with an unreachable upstream, not by stopping the user's dev session.
+
+Rollback: remove the include and validate/reload nginx first. Restore the backed-up gate only if it has not gained other changes since the backup; otherwise reverse the installer's three additions. Restart only `videototext`. No database rollback is needed.
+
+## Verification
+
+Run `node --test test/qtheory-dev-gate.test.js`, `python3 test/qtheory-dev-installer_test.py`, `node --check apps-gate.js`, and `git diff --check`. The project has no build script. Live proxy verification is required in addition to unit tests.
+
+Before: live route returned 404, confirmed in the browser. The initial browser screenshot request timed out; no before image was fabricated.

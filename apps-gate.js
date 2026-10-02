@@ -1,3 +1,4 @@
+import { qtheoryDevCard, registerQtheoryDevAccess } from './qtheory-dev-gate.js';
 import crypto from 'crypto';
 import express from 'express';
 import path from 'path';
@@ -6,14 +7,15 @@ import fetch from 'node-fetch';
 const COOKIE_NAME = 'video2text_apps';
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 6;
 const PASSWORD_HASH = '4d72990af17cc63c8240b1c28a62e9012799624639db07b5335b9d1cdafd6aac';
-const SESSION_SECRET = process.env.APP_GATE_SECRET || 'video2text-app-gate-secret-change-me';
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
 function signValue(value) {
-  return crypto.createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
+  const secret = process.env.APP_GATE_SECRET;
+  if (!secret || secret.length < 32) throw new Error('APP_GATE_SECRET must be configured.');
+  return crypto.createHmac('sha256', secret).update(value).digest('hex');
 }
 
 function buildCookieToken() {
@@ -244,6 +246,7 @@ function renderAppsHub() {
           </div>
 
           <div class="grid">
+            ${qtheoryDevCard}
             <article class="card">
               <div class="eyebrow">Study tools</div>
               <h2>EGR 1400 Final Practice Exam</h2>
@@ -265,6 +268,7 @@ function renderAppsHub() {
 }
 
 export function registerProtectedApps(app, rootDir) {
+  registerQtheoryDevAccess(app, { isAuthorized });
   const protectedAppsDir = path.join(rootDir, 'protected-apps');
   const egrDir = path.join(protectedAppsDir, 'egr1400');
 
